@@ -28,7 +28,8 @@ class Target(pygame.sprite.Sprite):
         if self.rect.colliderect(player.rect):
             self.pos[1] = random.choice(range(1, 10))
             player.score += 1
-            if player.score > 10:
+            player.balls += 1
+            if player.score >= 10:
                 self.move = random.choice([1, -1])
                 self.speed = player.score / 10
         if self.pos[1] > 9:
@@ -44,10 +45,13 @@ class Target(pygame.sprite.Sprite):
 
 
 class Ball(pygame.sprite.Sprite):
-    def __init__(self, pos, speed, gr, score):
+    SKINS = ["data/sprites/sprites_0.png"]
+
+    def __init__(self, pos, speed, gr, score_, balls_):
         super().__init__(gr)
-        self.score = score
-        self.image = pygame.image.load("data/sprites/sprites_0.png").convert_alpha()
+        self.score = score_
+        self.unlock_skins = [Ball.SKINS[0]]
+        self.image = pygame.image.load(self.unlock_skins[0]).convert_alpha()
         self.image = pygame.transform.scale(self.image, (tile_size, tile_size))
         self.rect = self.image.get_rect()
         self.pos = pos
@@ -55,7 +59,7 @@ class Ball(pygame.sprite.Sprite):
         self.speed = [0, 0]
         self.start_a = [0, 9.8]
         self.shooted = False
-        self.balls = 10
+        self.balls = balls_
         self.gr = gr
 
     def update(self, keys_, frame_speed_, screen_, screen_cap_, tile_size_):
@@ -96,13 +100,15 @@ class Ball(pygame.sprite.Sprite):
             self.pos[0] += self.speed[0] * frame_speed_
             self.pos[1] -= self.speed[1] * frame_speed_
             if self.pos[0] > 15 or self.pos[1] > 15 or self.pos[0] < -5 or self.pos[1] < -5:
-                self.__init__([1, 5], [1, 9.8], self.gr, self.score)
+                self.__init__([1, 5], [1, 9.8], self.gr, self.score, self.balls)
         self.rect.center = ((screen_cap_[0] + tile_size_ * self.pos[0]),
                             screen_cap_[1] + tile_size_ * self.pos[1])
 
 
 if __name__ == "__main__":
-    screen = pygame.display.set_mode(eval(open("data/config.txt", "r", encoding="utf-8").readlines()[0]))
+    config_file = open("data/config.txt", "r", encoding="utf-8").readlines()
+    screen = pygame.display.set_mode(eval(config_file[0]))
+    save_file = open(f"data/saves/{config_file[1]}.txt").readlines()
     screen_size = screen.get_size()
     player_sprites = pygame.sprite.Group()
     target_sprites = pygame.sprite.Group()
@@ -110,11 +116,11 @@ if __name__ == "__main__":
     screen_cap_x = (screen_size[0] - tile_size * 10) / 2
     screen_cap_y = (screen_size[1] - tile_size * 10) / 2
     screen_cap = screen_cap_x, screen_cap_y
-    ball = Ball([1, 5], [1, 9.8], player_sprites, 0)
+    ball = Ball([1, 5], [1, 9.8], player_sprites, save_file[0], save_file[1])
     target = Target([9, 5], tile_size, target_sprites, 1)
     clock = pygame.time.Clock()
     running = True
-    FONT = pygame.font.Font("data/font/retro-land-mayhem.ttf", 35)
+    FONT = pygame.font.Font("data/font/Undertale-Battle-Font.ttf", 35)
     BG = pygame.image.load("data/sprites/BG.png")
     BG = pygame.transform.scale(BG, (min(screen_size), min(screen_size)))
     while running:
@@ -130,7 +136,9 @@ if __name__ == "__main__":
         player_sprites.draw(screen)
         target_sprites.update(frame_speed, screen, screen_cap, tile_size, ball, player_sprites)
         target_sprites.draw(screen)
-        text = FONT.render(f"Score: {ball.score}", True, (255, 255, 255))
-        screen.blit(text, (0, 0))
+        score = FONT.render(f"Очков: {ball.score}", True, (255, 255, 255))
+        balls = FONT.render(f"Мячей: {ball.balls}", True, (255, 255, 255))
+        screen.blit(score, (0, 0))
+        screen.blit(balls, (0, screen_size[1] - 50))
         pygame.display.flip()
     pygame.quit()

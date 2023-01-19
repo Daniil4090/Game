@@ -6,7 +6,7 @@ pygame.init()
 class Target(pygame.sprite.Sprite):
     FRAMES = ["data/sprites/sprites_1.png", "data/sprites/sprites_2.png"]
 
-    def __init__(self, pos, tile_size_, gr, speed):
+    def __init__(self, pos, tile_size_, gr, speed, player):
         super().__init__(gr)
         self.size = tile_size_
         self.image = pygame.image.load(Target.FRAMES[0]).convert_alpha()
@@ -16,6 +16,9 @@ class Target(pygame.sprite.Sprite):
         self.frame = 0
         self.move = 0
         self.speed = speed
+        if player.score >= 10:
+            self.move = random.choice([1, -1])
+            self.speed = player.score / 10
 
     def update(self, frame_speed_, screen_, screen_cap_, tile_size_, player, player_sprites_):
         self.frame += 1 * frame_speed_
@@ -107,8 +110,12 @@ class Ball(pygame.sprite.Sprite):
 
 if __name__ == "__main__":
     config_file = open("data/config.txt", "r", encoding="utf-8").readlines()
+    try:
+        save_file = open(f"saves/{config_file[1]}_sav.txt", "r", encoding="utf-8").readlines()
+    except Exception as error:
+        print(error)
+        save_file = None
     screen = pygame.display.set_mode(eval(config_file[0]))
-    save_file = open(f"data/saves/{config_file[1]}.txt").readlines()
     screen_size = screen.get_size()
     player_sprites = pygame.sprite.Group()
     target_sprites = pygame.sprite.Group()
@@ -116,8 +123,11 @@ if __name__ == "__main__":
     screen_cap_x = (screen_size[0] - tile_size * 10) / 2
     screen_cap_y = (screen_size[1] - tile_size * 10) / 2
     screen_cap = screen_cap_x, screen_cap_y
-    ball = Ball([1, 5], [1, 9.8], player_sprites, save_file[0], save_file[1])
-    target = Target([9, 5], tile_size, target_sprites, 1)
+    if save_file is None:
+        ball = Ball([1, 5], [1, 9.8], player_sprites, 0, 10)
+    else:
+        ball = Ball([1, 5], [1, 9.8], player_sprites, int(save_file[0]), int(save_file[1]))
+    target = Target([9, 5], tile_size, target_sprites, 1, ball)
     clock = pygame.time.Clock()
     running = True
     FONT = pygame.font.Font("data/font/Undertale-Battle-Font.ttf", 35)
@@ -140,5 +150,8 @@ if __name__ == "__main__":
         balls = FONT.render(f"Мячей: {ball.balls}", True, (255, 255, 255))
         screen.blit(score, (0, 0))
         screen.blit(balls, (0, screen_size[1] - 50))
+        screen.blit(balls, (0, screen_size[1] - 50))
         pygame.display.flip()
+    save_file = open(f"saves/{config_file[1]}_sav.txt", "w+", encoding="utf-8")
+    save_file.write(f'{ball.score}\n{ball.balls}')
     pygame.quit()

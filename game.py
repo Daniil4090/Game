@@ -1,5 +1,6 @@
 import pygame
 import random
+import os
 pygame.init()
 
 
@@ -114,6 +115,7 @@ if __name__ == "__main__":
         save_file = open(f"saves/{config_file[1]}_sav.txt", "r", encoding="utf-8").readlines()
     except Exception as error:
         print(error)
+        os.mkdir("saves")
         save_file = None
     screen = pygame.display.set_mode(eval(config_file[0]))
     screen_size = screen.get_size()

@@ -72,7 +72,22 @@ class Ball(pygame.sprite.Sprite):
         self.balls = balls_
         self.gr = gr
 
-    def update(self, keys_, frame_speed_, screen_, screen_cap_, tile_size_):
+    def update(self, events, keys_, frame_speed_, screen_, screen_cap_, tile_size_):
+        for event in events:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_EQUALS:
+                self.skin += 1
+                if self.skin > 4:
+                    self.skin = 4
+                self.image = pygame.image.load(Ball.SKINS[self.skin]).convert_alpha()
+                self.image = pygame.transform.scale(self.image, (tile_size_, tile_size_))
+                self.rect = self.image.get_rect()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_MINUS:
+                self.skin -= 1
+                if self.skin < 0:
+                    self.skin = 0
+                self.image = pygame.image.load(Ball.SKINS[self.skin]).convert_alpha()
+                self.image = pygame.transform.scale(self.image, (tile_size_, tile_size_))
+                self.rect = self.image.get_rect()
         if not self.shooted:
             if keys_[pygame.K_SPACE]:
                 self.shooted = True
@@ -158,13 +173,16 @@ def start_screen():
     config_file = open("data/config.txt", "r", encoding="utf-8").readlines()
     screen = pygame.display.set_mode(eval(config_file[0]))
     screen_size = screen.get_size()
+    pygame.mouse.set_visible(False)
+    cursor_im = pygame.transform.scale(pygame.image.load("data/sprites/cursor_0.png").convert_alpha(), (64, 64))
     user_name = InputBox(0, 0, 500, 50, "User_Name")
+    c_pos = (0, 0)
     button = Button(
         screen, 100, 100, 300, 150, text='Играть',
         fontSize=50, margin=20,
         inactiveColour=(0, 128, 0),
         pressedColour=(0, 255, 0), radius=20,
-        onClick=lambda: main(screen, user_name.text)
+        onClick=lambda: main(screen, user_name.text, cursor_im)
     )
     running = True
     while running:
@@ -174,7 +192,9 @@ def start_screen():
             if event.type == pygame.QUIT or keys[pygame.K_ESCAPE]:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                main(screen, user_name.text)
+                main(screen, user_name.text, cursor_im)
+            if event.type == pygame.MOUSEMOTION:
+                c_pos = event.pos
             user_name.handle_event(event)
         user_name.update()
         user_name.rect.center = (screen_size[0] / 2, screen_size[1] / 2)
@@ -183,11 +203,13 @@ def start_screen():
         screen.fill((0, 0, 0))
         pygame_widgets.update(events)
         user_name.draw(screen)
+        screen.blit(cursor_im, c_pos)
         pygame.display.flip()
     pygame.quit()
 
 
-def main(screen, name):
+def main(screen, name, cursor):
+    c_pos = (0, 0)
     try:
         save_file = open(f"saves/{name}_sav.txt", "r", encoding="utf-8").readlines()
     except Exception as error:
@@ -217,17 +239,23 @@ def main(screen, name):
     font = pygame.font.Font("data/font/Undertale-Battle-Font.ttf", 35)
     bg = pygame.image.load("data/sprites/BG.png")
     bg = pygame.transform.scale(bg, (min(screen_size), min(screen_size)))
+    exiting = False
     running = True
     while running:
         frame_speed = clock.tick() / 1000
         events = pygame.event.get()
         keys = pygame.key.get_pressed()
         for event in events:
-            if event.type == pygame.QUIT or keys[pygame.K_ESCAPE]:
+            if event.type == pygame.QUIT:
+                exiting = True
                 running = False
+            if event.type == pygame.MOUSEMOTION:
+                c_pos = event.pos
+        if keys[pygame.K_ESCAPE]:
+            running = False
         screen.fill((0, 0, 0))
         screen.blit(bg, screen_cap)
-        player_sprites.update(keys, frame_speed, screen, screen_cap, tile_size)
+        player_sprites.update(events, keys, frame_speed, screen, screen_cap, tile_size)
         player_sprites.draw(screen)
         target_sprites.update(frame_speed, screen, screen_cap, tile_size, ball, player_sprites)
         target_sprites.draw(screen)
@@ -236,9 +264,12 @@ def main(screen, name):
         screen.blit(score, (0, 0))
         screen.blit(balls, (0, screen_size[1] - 50))
         screen.blit(balls, (0, screen_size[1] - 50))
+        screen.blit(cursor, c_pos)
         pygame.display.flip()
     save_file = open(f"saves/{name}_sav.txt", "w+", encoding="utf-8")
     save_file.write(f'{ball.score}\n{ball.balls}\n{ball.skin}')
+    if exiting:
+        pygame.quit()
 
 
 start_screen()

@@ -170,6 +170,7 @@ class InputBox:
 def start_screen():
     config_file = open("data/config.txt", "r", encoding="utf-8").readlines()
     screen = pygame.display.set_mode(eval(config_file[0]))
+    pygame.display.set_caption("Не придумаль :(")
     screen_size = screen.get_size()
     pygame.mouse.set_visible(False)
     cursor_im = pygame.transform.scale(pygame.image.load("data/sprites/cursor_0.png").convert_alpha(), (64, 64))

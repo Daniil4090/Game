@@ -91,8 +91,6 @@ class Ball(pygame.sprite.Sprite):
         if not self.shooted:
             if keys_[pygame.K_SPACE]:
                 self.shooted = True
-                if self.balls is not None:
-                    self.balls -= 1
             if keys_[pygame.K_UP]:
                 self.start_speed[1] += 10 * frame_speed_
             if keys_[pygame.K_DOWN]:
@@ -114,7 +112,7 @@ class Ball(pygame.sprite.Sprite):
                 speed -= self.start_a[1] * 0.05
                 tr_pos = (screen_cap_[0] + tile_size_ * (self.pos[0] + self.start_speed[0] * 0.1 * i),
                           screen_cap_[1] + tile_size_ * (self.pos[1] - speed * 0.1 * i))
-                pygame.draw.circle(screen_, (0, 0, 0), tr_pos, tile_size_ * 0.1, 0)
+                pygame.draw.circle(screen_, (128, 128, 128), tr_pos, tile_size_ * 0.1, 0)
         else:
             if self.start_speed[1] is not None and self.start_speed[0] is not None:
                 self.speed[1] = self.start_speed[1]
@@ -125,7 +123,7 @@ class Ball(pygame.sprite.Sprite):
             self.pos[0] += self.speed[0] * frame_speed_
             self.pos[1] -= self.speed[1] * frame_speed_
             if self.pos[0] > 15 or self.pos[1] > 15 or self.pos[0] < -5 or self.pos[1] < -5:
-                self.__init__([1, 5], [1, 9.8], self.gr, self.score, self.balls, tile_size_, self.skin)
+                self.__init__([1, 5], [1, 9.8], self.gr, self.score, self.balls - 1, tile_size_, self.skin)
         self.rect.center = ((screen_cap_[0] + tile_size_ * self.pos[0]),
                             screen_cap_[1] + tile_size_ * self.pos[1])
 
@@ -239,8 +237,11 @@ def main(screen, name, cursor):
     font = pygame.font.Font("data/font/Undertale-Battle-Font.ttf", 35)
     bg = pygame.image.load("data/sprites/BG.png")
     bg = pygame.transform.scale(bg, (min(screen_size), min(screen_size)))
+    bg1 = pygame.image.load("data/sprites/BG_1.png")
+    bg1 = pygame.transform.scale(bg1, (min(screen_size), min(screen_size)))
     exiting = False
     running = True
+    game_over = False
     while running:
         frame_speed = clock.tick() / 1000
         events = pygame.event.get()
@@ -253,21 +254,28 @@ def main(screen, name, cursor):
                 c_pos = event.pos
         if keys[pygame.K_ESCAPE]:
             running = False
+        if keys[pygame.K_r]:
+            main(screen, name, cursor)
+        if ball.balls <= 0:
+            game_over = True
         screen.fill((0, 0, 0))
-        screen.blit(bg, screen_cap)
-        player_sprites.update(events, keys, frame_speed, screen, screen_cap, tile_size)
-        player_sprites.draw(screen)
-        target_sprites.update(frame_speed, screen, screen_cap, tile_size, ball, player_sprites)
-        target_sprites.draw(screen)
-        score = font.render(f"Очков: {ball.score}", True, (255, 255, 255))
-        balls = font.render(f"Мячей: {ball.balls}", True, (255, 255, 255))
-        screen.blit(score, (0, 0))
-        screen.blit(balls, (0, screen_size[1] - 50))
-        screen.blit(balls, (0, screen_size[1] - 50))
+        if not game_over:
+            screen.blit(bg, screen_cap)
+            player_sprites.update(events, keys, frame_speed, screen, screen_cap, tile_size)
+            player_sprites.draw(screen)
+            target_sprites.update(frame_speed, screen, screen_cap, tile_size, ball, player_sprites)
+            target_sprites.draw(screen)
+            score = font.render(f"Очков: {ball.score}", True, (255, 255, 255))
+            balls = font.render(f"Мячей: {ball.balls}", True, (255, 255, 255))
+            screen.blit(score, (0, 0))
+            screen.blit(balls, (0, screen_size[1] - 50))
+        else:
+            screen.blit(bg1, screen_cap)
         screen.blit(cursor, c_pos)
         pygame.display.flip()
-    save_file = open(f"saves/{name}_sav.txt", "w+", encoding="utf-8")
-    save_file.write(f'{ball.score}\n{ball.balls}\n{ball.skin}')
+    if not game_over:
+        save_file = open(f"saves/{name}_sav.txt", "w+", encoding="utf-8")
+        save_file.write(f'{ball.score}\n{ball.balls}\n{ball.skin}')
     if exiting:
         pygame.quit()
 

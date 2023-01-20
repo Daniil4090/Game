@@ -1,11 +1,13 @@
 import pygame
 import random
 import os
+import pygame_widgets
+from pygame_widgets.button import Button
 pygame.init()
 
 
 class Target(pygame.sprite.Sprite):
-    FRAMES = ["data/sprites/sprites_1.png", "data/sprites/sprites_2.png"]
+    FRAMES = ["data/sprites/target_0.png", "data/sprites/target_1.png"]
 
     def __init__(self, pos, tile_size_, gr, speed, player):
         super().__init__(gr)
@@ -49,14 +51,18 @@ class Target(pygame.sprite.Sprite):
 
 
 class Ball(pygame.sprite.Sprite):
-    SKINS = ["data/sprites/sprites_0.png"]
+    SKINS = ["data/sprites/player_0.png",
+             "data/sprites/player_1.png",
+             "data/sprites/player_2.png",
+             "data/sprites/player_3.png",
+             "data/sprites/player_4.png"]
 
-    def __init__(self, pos, speed, gr, score_, balls_):
+    def __init__(self, pos, speed, gr, score_, balls_, tile_size_, skin):
         super().__init__(gr)
         self.score = score_
-        self.unlock_skins = [Ball.SKINS[0]]
-        self.image = pygame.image.load(self.unlock_skins[0]).convert_alpha()
-        self.image = pygame.transform.scale(self.image, (tile_size, tile_size))
+        self.skin = skin
+        self.image = pygame.image.load(Ball.SKINS[self.skin]).convert_alpha()
+        self.image = pygame.transform.scale(self.image, (tile_size_, tile_size_))
         self.rect = self.image.get_rect()
         self.pos = pos
         self.start_speed = speed
@@ -104,20 +110,91 @@ class Ball(pygame.sprite.Sprite):
             self.pos[0] += self.speed[0] * frame_speed_
             self.pos[1] -= self.speed[1] * frame_speed_
             if self.pos[0] > 15 or self.pos[1] > 15 or self.pos[0] < -5 or self.pos[1] < -5:
-                self.__init__([1, 5], [1, 9.8], self.gr, self.score, self.balls)
+                self.__init__([1, 5], [1, 9.8], self.gr, self.score, self.balls, tile_size_, self.skin)
         self.rect.center = ((screen_cap_[0] + tile_size_ * self.pos[0]),
                             screen_cap_[1] + tile_size_ * self.pos[1])
 
 
-if __name__ == "__main__":
+class InputBox:
+    COLOR_INACTIVE = (0, 128, 0)
+    COLOR_ACTIVE = (0, 255, 0)
+    FONT = pygame.font.Font("data/font/Undertale-Battle-Font.ttf", 35)
+
+    def __init__(self, x, y, w, h, text=''):
+        self.rect = pygame.Rect(x, y, w, h)
+        self.color = InputBox.COLOR_INACTIVE
+        self.text = text
+        self.txt_surface = InputBox.FONT.render(text, True, self.color)
+        self.active = False
+
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                self.active = not self.active
+            else:
+                self.active = False
+            self.color = InputBox.COLOR_ACTIVE if self.active else InputBox.COLOR_INACTIVE
+        if event.type == pygame.KEYDOWN:
+            if self.active:
+                if event.key == pygame.K_RETURN:
+                    print(self.text)
+                    self.text = ''
+                elif event.key == pygame.K_BACKSPACE:
+                    self.text = self.text[:-1]
+                else:
+                    self.text += event.unicode
+                self.txt_surface = InputBox.FONT.render(self.text, True, self.color)
+
+    def update(self):
+        width = max(200, self.txt_surface.get_width()+10)
+        self.rect.w = width
+
+    def draw(self, screen):
+        screen.blit(self.txt_surface, (self.rect.x+5, self.rect.y+5))
+        pygame.draw.rect(screen, self.color, self.rect, 2)
+
+
+def start_screen():
     config_file = open("data/config.txt", "r", encoding="utf-8").readlines()
+    screen = pygame.display.set_mode(eval(config_file[0]))
+    screen_size = screen.get_size()
+    user_name = InputBox(0, 0, 500, 50, "User_Name")
+    button = Button(
+        screen, 100, 100, 300, 150, text='Играть',
+        fontSize=50, margin=20,
+        inactiveColour=(0, 128, 0),
+        pressedColour=(0, 255, 0), radius=20,
+        onClick=lambda: main(screen, user_name.text)
+    )
+    running = True
+    while running:
+        events = pygame.event.get()
+        keys = pygame.key.get_pressed()
+        for event in events:
+            if event.type == pygame.QUIT or keys[pygame.K_ESCAPE]:
+                running = False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                main(screen, user_name.text)
+            user_name.handle_event(event)
+        user_name.update()
+        user_name.rect.center = (screen_size[0] / 2, screen_size[1] / 2)
+        button.setX(screen_size[0] / 2 - button.getWidth() / 2)
+        button.setY(screen_size[1] / 2 - button.getHeight() / 2 + 150)
+        screen.fill((0, 0, 0))
+        pygame_widgets.update(events)
+        user_name.draw(screen)
+        pygame.display.flip()
+    pygame.quit()
+
+
+def main(screen, name):
     try:
-        save_file = open(f"saves/{config_file[1]}_sav.txt", "r", encoding="utf-8").readlines()
+        save_file = open(f"saves/{name}_sav.txt", "r", encoding="utf-8").readlines()
     except Exception as error:
         print(error)
-        os.mkdir("saves")
+        if not os.path.exists("saves"):
+            os.mkdir("saves")
         save_file = None
-    screen = pygame.display.set_mode(eval(config_file[0]))
     screen_size = screen.get_size()
     player_sprites = pygame.sprite.Group()
     target_sprites = pygame.sprite.Group()
@@ -126,15 +203,21 @@ if __name__ == "__main__":
     screen_cap_y = (screen_size[1] - tile_size * 10) / 2
     screen_cap = screen_cap_x, screen_cap_y
     if save_file is None:
-        ball = Ball([1, 5], [1, 9.8], player_sprites, 0, 10)
+        ball = Ball([1, 5], [1, 9.8], player_sprites, 0, 10, tile_size, 0)
     else:
-        ball = Ball([1, 5], [1, 9.8], player_sprites, int(save_file[0]), int(save_file[1]))
+        ball = Ball([1, 5],
+                    [1, 9.8],
+                    player_sprites,
+                    int(save_file[0]),
+                    int(save_file[1]),
+                    tile_size,
+                    int(save_file[2]))
     target = Target([9, 5], tile_size, target_sprites, 1, ball)
     clock = pygame.time.Clock()
+    font = pygame.font.Font("data/font/Undertale-Battle-Font.ttf", 35)
+    bg = pygame.image.load("data/sprites/BG.png")
+    bg = pygame.transform.scale(bg, (min(screen_size), min(screen_size)))
     running = True
-    FONT = pygame.font.Font("data/font/Undertale-Battle-Font.ttf", 35)
-    BG = pygame.image.load("data/sprites/BG.png")
-    BG = pygame.transform.scale(BG, (min(screen_size), min(screen_size)))
     while running:
         frame_speed = clock.tick() / 1000
         events = pygame.event.get()
@@ -143,17 +226,19 @@ if __name__ == "__main__":
             if event.type == pygame.QUIT or keys[pygame.K_ESCAPE]:
                 running = False
         screen.fill((0, 0, 0))
-        screen.blit(BG, screen_cap)
+        screen.blit(bg, screen_cap)
         player_sprites.update(keys, frame_speed, screen, screen_cap, tile_size)
         player_sprites.draw(screen)
         target_sprites.update(frame_speed, screen, screen_cap, tile_size, ball, player_sprites)
         target_sprites.draw(screen)
-        score = FONT.render(f"Очков: {ball.score}", True, (255, 255, 255))
-        balls = FONT.render(f"Мячей: {ball.balls}", True, (255, 255, 255))
+        score = font.render(f"Очков: {ball.score}", True, (255, 255, 255))
+        balls = font.render(f"Мячей: {ball.balls}", True, (255, 255, 255))
         screen.blit(score, (0, 0))
         screen.blit(balls, (0, screen_size[1] - 50))
         screen.blit(balls, (0, screen_size[1] - 50))
         pygame.display.flip()
-    save_file = open(f"saves/{config_file[1]}_sav.txt", "w+", encoding="utf-8")
-    save_file.write(f'{ball.score}\n{ball.balls}')
-    pygame.quit()
+    save_file = open(f"saves/{name}_sav.txt", "w+", encoding="utf-8")
+    save_file.write(f'{ball.score}\n{ball.balls}\n{ball.skin}')
+
+
+start_screen()

@@ -187,7 +187,7 @@ def start_screen():
         events = pygame.event.get()
         keys = pygame.key.get_pressed()
         for event in events:
-            if event.type == pygame.QUIT or keys[pygame.K_ESCAPE]:
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                 main(screen, user_name.text, cursor_im)

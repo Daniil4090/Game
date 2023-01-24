@@ -185,6 +185,7 @@ def start_screen():
     )
     running = True
     while running:
+        pygame.mixer.music.stop()
         events = pygame.event.get()
         for event in events:
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
@@ -223,7 +224,7 @@ def main(screen, name, cursor):
     screen_cap_y = (screen_size[1] - tile_size * 10) / 2
     screen_cap = screen_cap_x, screen_cap_y
     if save_file is None:
-        ball = Ball([1, 5], [1, 9.8], player_sprites, 0, 100, tile_size, 0)
+        ball = Ball([1, 5], [1, 9.8], player_sprites, 0, 150, tile_size, 0)
     else:
         ball = Ball([1, 5],
                     [1, 9.8],
@@ -245,6 +246,7 @@ def main(screen, name, cursor):
     running = True
     game_over = False
     win_s = False
+    now_playing = None
     while running:
         frame_speed = clock.tick() / 1000
         events = pygame.event.get()
@@ -258,13 +260,18 @@ def main(screen, name, cursor):
         if keys[pygame.K_ESCAPE]:
             running = False
         if keys[pygame.K_r]:
-            main(screen, name, cursor)
+            running = False
         if ball.balls <= 0:
             game_over = True
         if ball.score >= 100:
             win_s = True
         screen.fill((0, 0, 0))
         if not game_over and not win_s:
+            if now_playing != 'g_pr':
+                pygame.mixer.music.stop()
+                pygame.mixer.music.load('data/music/GameProcces.mp3')
+                pygame.mixer.music.play(-1)
+                now_playing = "g_pr"
             screen.blit(bg, screen_cap)
             player_sprites.update(events, keys, frame_speed, screen, screen_cap, tile_size)
             player_sprites.draw(screen)
@@ -275,14 +282,29 @@ def main(screen, name, cursor):
             screen.blit(score, (0, 0))
             screen.blit(balls, (0, screen_size[1] - 50))
         elif game_over:
+            if now_playing != 'g_o':
+                save_file = open(f"saves/{name}_sav.txt", "w+", encoding="utf-8")
+                save_file.write(f'0\n150\n0')
+                pygame.mixer.music.stop()
+                pygame.mixer.music.load('data/music/GameOver.mp3')
+                pygame.mixer.music.play()
+                now_playing = "g_o"
             screen.blit(bg1, screen_cap)
         elif win_s:
+            if now_playing != 'g_p':
+                pygame.mixer.music.stop()
+                pygame.mixer.music.load('data/music/GamePassed.mp3')
+                pygame.mixer.music.play()
+                now_playing = "g_p"
             screen.blit(bg2, screen_cap)
         screen.blit(cursor, c_pos)
         pygame.display.flip()
     if not game_over:
         save_file = open(f"saves/{name}_sav.txt", "w+", encoding="utf-8")
-        save_file.write(f'{ball.score}\n{ball.balls}\n{ball.skin}')
+        if ball.score > 79:
+            save_file.write(f'80\n20\n{ball.skin}')
+        else:
+            save_file.write(f'{ball.score}\n{ball.balls}\n{ball.skin}')
     if exiting:
         pygame.quit()
 

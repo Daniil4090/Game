@@ -34,7 +34,7 @@ class Target(pygame.sprite.Sprite):
         if self.rect.colliderect(player.rect):
             self.pos[1] = random.choice(range(1, 10))
             player.score += 1
-            player.balls += 1
+            player.speed = [-player.speed[0], player.speed[1]]
             if player.score >= 10:
                 self.move = random.choice([1, -1])
                 self.speed = player.score / 10
@@ -170,7 +170,7 @@ class InputBox:
 def start_screen():
     config_file = open("data/config.txt", "r", encoding="utf-8").readlines()
     screen = pygame.display.set_mode(eval(config_file[0]))
-    pygame.display.set_caption("Не придумаль :(")
+    pygame.display.set_caption("")
     screen_size = screen.get_size()
     pygame.mouse.set_visible(False)
     cursor_im = pygame.transform.scale(pygame.image.load("data/sprites/cursor_0.png").convert_alpha(), (64, 64))
@@ -186,7 +186,6 @@ def start_screen():
     running = True
     while running:
         events = pygame.event.get()
-        keys = pygame.key.get_pressed()
         for event in events:
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 running = False
@@ -224,7 +223,7 @@ def main(screen, name, cursor):
     screen_cap_y = (screen_size[1] - tile_size * 10) / 2
     screen_cap = screen_cap_x, screen_cap_y
     if save_file is None:
-        ball = Ball([1, 5], [1, 9.8], player_sprites, 0, 10, tile_size, 0)
+        ball = Ball([1, 5], [1, 9.8], player_sprites, 0, 100, tile_size, 0)
     else:
         ball = Ball([1, 5],
                     [1, 9.8],
@@ -240,9 +239,12 @@ def main(screen, name, cursor):
     bg = pygame.transform.scale(bg, (min(screen_size), min(screen_size)))
     bg1 = pygame.image.load("data/sprites/BG_1.png")
     bg1 = pygame.transform.scale(bg1, (min(screen_size), min(screen_size)))
+    bg2 = pygame.image.load("data/sprites/BG_2.png")
+    bg2 = pygame.transform.scale(bg2, (min(screen_size), min(screen_size)))
     exiting = False
     running = True
     game_over = False
+    win_s = False
     while running:
         frame_speed = clock.tick() / 1000
         events = pygame.event.get()
@@ -259,8 +261,10 @@ def main(screen, name, cursor):
             main(screen, name, cursor)
         if ball.balls <= 0:
             game_over = True
+        if ball.score >= 100:
+            win_s = True
         screen.fill((0, 0, 0))
-        if not game_over:
+        if not game_over and not win_s:
             screen.blit(bg, screen_cap)
             player_sprites.update(events, keys, frame_speed, screen, screen_cap, tile_size)
             player_sprites.draw(screen)
@@ -270,8 +274,10 @@ def main(screen, name, cursor):
             balls = font.render(f"Мячей: {ball.balls}", True, (255, 255, 255))
             screen.blit(score, (0, 0))
             screen.blit(balls, (0, screen_size[1] - 50))
-        else:
+        elif game_over:
             screen.blit(bg1, screen_cap)
+        elif win_s:
+            screen.blit(bg2, screen_cap)
         screen.blit(cursor, c_pos)
         pygame.display.flip()
     if not game_over:
